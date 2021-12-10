@@ -11,11 +11,11 @@
 #define __ASM_ATOMIC_LSE_H
 
 #define ATOMIC_OP(op, asm_op)						\
-static inline void __lse_atomic_##op(int i, atomic_t *v)			\
+static inline void __lse_atomic_##op(int i, atomic_t *v)		\
 {									\
 	asm volatile(							\
 	__LSE_PREAMBLE							\
-"	" #asm_op "	%w[i], %[v]\n"					\
+	"	" #asm_op "	%w[i], %[v]\n"				\
 	: [i] "+r" (i), [v] "+Q" (v->counter)				\
 	: "r" (v));							\
 }
@@ -25,6 +25,11 @@ ATOMIC_OP(or, stset)
 ATOMIC_OP(xor, steor)
 ATOMIC_OP(add, stadd)
 
+static inline void __lse_atomic_sub(int i, atomic_t *v)
+{
+	__lse_atomic_add(-i, v);
+}
+
 #undef ATOMIC_OP
 
 #define ATOMIC_FETCH_OP(name, mb, op, asm_op, cl...)			\
@@ -32,7 +37,7 @@ static inline int __lse_atomic_fetch_##op##name(int i, atomic_t *v)	\
 {									\
 	asm volatile(							\
 	__LSE_PREAMBLE							\
-"	" #asm_op #mb "	%w[i], %w[i], %[v]"				\
+	"	" #asm_op #mb "	%w[i], %w[i], %[v]"			\
 	: [i] "+r" (i), [v] "+Q" (v->counter)				\
 	: "r" (v)							\
 	: cl);								\
@@ -54,7 +59,20 @@ ATOMIC_FETCH_OPS(add, ldadd)
 #undef ATOMIC_FETCH_OP
 #undef ATOMIC_FETCH_OPS
 
-#define ATOMIC_OP_ADD_RETURN(name, mb, cl...)				\
+#define ATOMIC_FETCH_OP_SUB(name)					\
+static inline int __lse_atomic_fetch_sub##name(int i, atomic_t *v)	\
+{									\
+	return __lse_atomic_fetch_add##name(-i, v);			\
+}
+
+ATOMIC_FETCH_OP_SUB(_relaxed)
+ATOMIC_FETCH_OP_SUB(_acquire)
+ATOMIC_FETCH_OP_SUB(_release)
+ATOMIC_FETCH_OP_SUB(        )
+
+#undef ATOMIC_FETCH_OP_SUB
+
+#define ATOMIC_OP_ADD_SUB_RETURN(name, mb, cl...)			\
 static inline int __lse_atomic_add_return##name(int i, atomic_t *v)	\
 {									\
 	u32 tmp;							\
@@ -68,14 +86,19 @@ static inline int __lse_atomic_add_return##name(int i, atomic_t *v)	\
 	: cl);								\
 									\
 	return i;							\
+}									\
+									\
+static inline int __lse_atomic_sub_return##name(int i, atomic_t *v)	\
+{									\
+	return __lse_atomic_add_return##name(-i, v);			\
 }
 
-ATOMIC_OP_ADD_RETURN(_relaxed,   )
-ATOMIC_OP_ADD_RETURN(_acquire,  a, "memory")
-ATOMIC_OP_ADD_RETURN(_release,  l, "memory")
-ATOMIC_OP_ADD_RETURN(        , al, "memory")
+ATOMIC_OP_ADD_SUB_RETURN(_relaxed,   )
+ATOMIC_OP_ADD_SUB_RETURN(_acquire,  a, "memory")
+ATOMIC_OP_ADD_SUB_RETURN(_release,  l, "memory")
+ATOMIC_OP_ADD_SUB_RETURN(        , al, "memory")
 
-#undef ATOMIC_OP_ADD_RETURN
+#undef ATOMIC_OP_ADD_SUB_RETURN
 
 static inline void __lse_atomic_and(int i, atomic_t *v)
 {
@@ -108,67 +131,12 @@ ATOMIC_FETCH_OP_AND(        , al, "memory")
 
 #undef ATOMIC_FETCH_OP_AND
 
-static inline void __lse_atomic_sub(int i, atomic_t *v)
-{
-	asm volatile(
-	__LSE_PREAMBLE
-	"	neg	%w[i], %w[i]\n"
-	"	stadd	%w[i], %[v]"
-	: [i] "+&r" (i), [v] "+Q" (v->counter)
-	: "r" (v));
-}
-
-#define ATOMIC_OP_SUB_RETURN(name, mb, cl...)				\
-static inline int __lse_atomic_sub_return##name(int i, atomic_t *v)	\
-{									\
-	u32 tmp;							\
-									\
-	asm volatile(							\
-	__LSE_PREAMBLE							\
-	"	neg	%w[i], %w[i]\n"					\
-	"	ldadd" #mb "	%w[i], %w[tmp], %[v]\n"			\
-	"	add	%w[i], %w[i], %w[tmp]"				\
-	: [i] "+&r" (i), [v] "+Q" (v->counter), [tmp] "=&r" (tmp)	\
-	: "r" (v)							\
-	: cl);							\
-									\
-	return i;							\
-}
-
-ATOMIC_OP_SUB_RETURN(_relaxed,   )
-ATOMIC_OP_SUB_RETURN(_acquire,  a, "memory")
-ATOMIC_OP_SUB_RETURN(_release,  l, "memory")
-ATOMIC_OP_SUB_RETURN(        , al, "memory")
-
-#undef ATOMIC_OP_SUB_RETURN
-
-#define ATOMIC_FETCH_OP_SUB(name, mb, cl...)				\
-static inline int __lse_atomic_fetch_sub##name(int i, atomic_t *v)	\
-{									\
-	asm volatile(							\
-	__LSE_PREAMBLE							\
-	"	neg	%w[i], %w[i]\n"					\
-	"	ldadd" #mb "	%w[i], %w[i], %[v]"			\
-	: [i] "+&r" (i), [v] "+Q" (v->counter)				\
-	: "r" (v)							\
-	: cl);								\
-									\
-	return i;							\
-}
-
-ATOMIC_FETCH_OP_SUB(_relaxed,   )
-ATOMIC_FETCH_OP_SUB(_acquire,  a, "memory")
-ATOMIC_FETCH_OP_SUB(_release,  l, "memory")
-ATOMIC_FETCH_OP_SUB(        , al, "memory")
-
-#undef ATOMIC_FETCH_OP_SUB
-
 #define ATOMIC64_OP(op, asm_op)						\
 static inline void __lse_atomic64_##op(s64 i, atomic64_t *v)		\
 {									\
 	asm volatile(							\
 	__LSE_PREAMBLE							\
-"	" #asm_op "	%[i], %[v]\n"					\
+	"	" #asm_op "	%[i], %[v]\n"				\
 	: [i] "+r" (i), [v] "+Q" (v->counter)				\
 	: "r" (v));							\
 }
@@ -178,6 +146,11 @@ ATOMIC64_OP(or, stset)
 ATOMIC64_OP(xor, steor)
 ATOMIC64_OP(add, stadd)
 
+static inline void __lse_atomic64_sub(s64 i, atomic64_t *v)
+{
+	__lse_atomic64_add(-i, v);
+}
+
 #undef ATOMIC64_OP
 
 #define ATOMIC64_FETCH_OP(name, mb, op, asm_op, cl...)			\
@@ -185,7 +158,7 @@ static inline long __lse_atomic64_fetch_##op##name(s64 i, atomic64_t *v)\
 {									\
 	asm volatile(							\
 	__LSE_PREAMBLE							\
-"	" #asm_op #mb "	%[i], %[i], %[v]"				\
+	"	" #asm_op #mb "	%[i], %[i], %[v]"			\
 	: [i] "+r" (i), [v] "+Q" (v->counter)				\
 	: "r" (v)							\
 	: cl);								\
@@ -207,7 +180,20 @@ ATOMIC64_FETCH_OPS(add, ldadd)
 #undef ATOMIC64_FETCH_OP
 #undef ATOMIC64_FETCH_OPS
 
-#define ATOMIC64_OP_ADD_RETURN(name, mb, cl...)				\
+#define ATOMIC64_FETCH_OP_SUB(name)					\
+static inline long __lse_atomic64_fetch_sub##name(s64 i, atomic64_t *v)	\
+{									\
+	return __lse_atomic64_fetch_add##name(-i, v);			\
+}
+
+ATOMIC64_FETCH_OP_SUB(_relaxed)
+ATOMIC64_FETCH_OP_SUB(_acquire)
+ATOMIC64_FETCH_OP_SUB(_release)
+ATOMIC64_FETCH_OP_SUB(        )
+
+#undef ATOMIC64_FETCH_OP_SUB
+
+#define ATOMIC64_OP_ADD_SUB_RETURN(name, mb, cl...)			\
 static inline long __lse_atomic64_add_return##name(s64 i, atomic64_t *v)\
 {									\
 	unsigned long tmp;						\
@@ -221,14 +207,19 @@ static inline long __lse_atomic64_add_return##name(s64 i, atomic64_t *v)\
 	: cl);								\
 									\
 	return i;							\
+}									\
+									\
+static inline long __lse_atomic64_sub_return##name(s64 i, atomic64_t *v)\
+{									\
+	return __lse_atomic64_add_return##name(-i, v);			\
 }
 
-ATOMIC64_OP_ADD_RETURN(_relaxed,   )
-ATOMIC64_OP_ADD_RETURN(_acquire,  a, "memory")
-ATOMIC64_OP_ADD_RETURN(_release,  l, "memory")
-ATOMIC64_OP_ADD_RETURN(        , al, "memory")
+ATOMIC64_OP_ADD_SUB_RETURN(_relaxed,   )
+ATOMIC64_OP_ADD_SUB_RETURN(_acquire,  a, "memory")
+ATOMIC64_OP_ADD_SUB_RETURN(_release,  l, "memory")
+ATOMIC64_OP_ADD_SUB_RETURN(        , al, "memory")
 
-#undef ATOMIC64_OP_ADD_RETURN
+#undef ATOMIC64_OP_ADD_SUB_RETURN
 
 static inline void __lse_atomic64_and(s64 i, atomic64_t *v)
 {
@@ -260,61 +251,6 @@ ATOMIC64_FETCH_OP_AND(_release,  l, "memory")
 ATOMIC64_FETCH_OP_AND(        , al, "memory")
 
 #undef ATOMIC64_FETCH_OP_AND
-
-static inline void __lse_atomic64_sub(s64 i, atomic64_t *v)
-{
-	asm volatile(
-	__LSE_PREAMBLE
-	"	neg	%[i], %[i]\n"
-	"	stadd	%[i], %[v]"
-	: [i] "+&r" (i), [v] "+Q" (v->counter)
-	: "r" (v));
-}
-
-#define ATOMIC64_OP_SUB_RETURN(name, mb, cl...)				\
-static inline long __lse_atomic64_sub_return##name(s64 i, atomic64_t *v)	\
-{									\
-	unsigned long tmp;						\
-									\
-	asm volatile(							\
-	__LSE_PREAMBLE							\
-	"	neg	%[i], %[i]\n"					\
-	"	ldadd" #mb "	%[i], %x[tmp], %[v]\n"			\
-	"	add	%[i], %[i], %x[tmp]"				\
-	: [i] "+&r" (i), [v] "+Q" (v->counter), [tmp] "=&r" (tmp)	\
-	: "r" (v)							\
-	: cl);								\
-									\
-	return i;							\
-}
-
-ATOMIC64_OP_SUB_RETURN(_relaxed,   )
-ATOMIC64_OP_SUB_RETURN(_acquire,  a, "memory")
-ATOMIC64_OP_SUB_RETURN(_release,  l, "memory")
-ATOMIC64_OP_SUB_RETURN(        , al, "memory")
-
-#undef ATOMIC64_OP_SUB_RETURN
-
-#define ATOMIC64_FETCH_OP_SUB(name, mb, cl...)				\
-static inline long __lse_atomic64_fetch_sub##name(s64 i, atomic64_t *v)	\
-{									\
-	asm volatile(							\
-	__LSE_PREAMBLE							\
-	"	neg	%[i], %[i]\n"					\
-	"	ldadd" #mb "	%[i], %[i], %[v]"			\
-	: [i] "+&r" (i), [v] "+Q" (v->counter)				\
-	: "r" (v)							\
-	: cl);								\
-									\
-	return i;							\
-}
-
-ATOMIC64_FETCH_OP_SUB(_relaxed,   )
-ATOMIC64_FETCH_OP_SUB(_acquire,  a, "memory")
-ATOMIC64_FETCH_OP_SUB(_release,  l, "memory")
-ATOMIC64_FETCH_OP_SUB(        , al, "memory")
-
-#undef ATOMIC64_FETCH_OP_SUB
 
 static inline s64 __lse_atomic64_dec_if_positive(atomic64_t *v)
 {
@@ -403,7 +339,7 @@ __lse__cmpxchg_double##name(unsigned long old1,				\
 	"	eor	%[old2], %[old2], %[oldval2]\n"			\
 	"	orr	%[old1], %[old1], %[old2]"			\
 	: [old1] "+&r" (x0), [old2] "+&r" (x1),				\
-	  [v] "+Q" (*(unsigned long *)ptr)				\
+	  [v] "+Q" (*(__uint128_t *)ptr)				\
 	: [new1] "r" (x2), [new2] "r" (x3), [ptr] "r" (x4),		\
 	  [oldval1] "r" (oldval1), [oldval2] "r" (oldval2)		\
 	: cl);								\
