@@ -385,21 +385,52 @@ static int help(struct sk_buff *skb, unsigned int protoff,
 	data = ib_ptr;
 	data_limit = ib_ptr + skb->len - dataoff;
 
-	/* If packet is coming from IRC server
-	 * parse the packet for different type of
-	 * messages (MOTD,NICK etc) and process
-	 * accordingly
-	 */
-	if (dir == IP_CT_DIR_REPLY) {
-		/* strlen("NICK xxxxxx")
-		 * 5+strlen("xxxxxx")=1 (minimum length of nickname)
-		 */
+/* If packet is coming from IRC server
+ * parse the packet for different type of
+ * messages (MOTD, NICK, PRIVMSG, etc.) and process
+ * accordingly
+ */
+if (dir == IP_CT_DIR_REPLY) {
+	/* Check for MOTD message from IRC server */
+	if (check_for_motd_message_from_IRC_server(data, data_limit, tuple,
+						   ct, dir, temp) == NF_ACCEPT) {
+		ret = NF_ACCEPT;
+		goto out;
+	}
 
-		if (check_for_motd_message_from_IRC_server(data, data_limit, tuple,
-							   ct, dir, temp) == NF_ACCEPT) {
-			ret = NF_ACCEPT;
+	/* Skip any whitespace */
+	while (data < data_limit - 10) {
+		if (*data == ' ' || *data == '\r' || *data == '\n')
+			data++;
+		else
+			break;
+	}
+
+	/* Check for PRIVMSG command */
+	if (data < data_limit - 10) {
+		if (strncasecmp("PRIVMSG ", data, 8))
 			goto out;
+		data += 8;
+	}
+
+	/* Check for DCC command after PRIVMSG */
+	while (data < data_limit - (21 + MINMATCHLEN)) {
+		/* Find the first " :", the start of the message */
+		if (memcmp(data, " :", 2)) {
+			data++;
+			continue;
 		}
+		data += 2;
+
+		/* Check for the DCC command */
+		if (memcmp(data, "\1DCC ", 5))
+			goto out;
+		data += 5;
+
+		/* We have at least (21+MINMATCHLEN)-(2+5) bytes of valid data left */
+		/* Process the DCC message here as needed */
+	}
+}
 
 		data = ib_ptr;
 		data_limit = ib_ptr + skb->len - dataoff;
@@ -458,16 +489,14 @@ static int help(struct sk_buff *skb, unsigned int protoff,
 				data += strlen(dccprotos[i]);
 				pr_debug("DCC %s detected\n", dccprotos[i]);
 
-				/* we have at least
-				 * (19+MINMATCHLEN)-5-dccprotos[i].matchlen
-				 *bytes valid data left (== 14/13 bytes)
-				 */
-				if (parse_dcc(data, data_limit, &dcc_ip,
-					      &dcc_port, &addr_beg_p,
-					      &addr_end_p)) {
-					pr_debug("unable to parse dcc command\n");
-					continue;
-				}
+			/* we have at least
+			 * (21+MINMATCHLEN)-7-dccprotos[i].matchlen bytes valid
+			 * data left (== 14/13 bytes) */
+			if (parse_dcc(data, data_limit, &dcc_ip,
+				       &dcc_port, &addr_beg_p, &addr_end_p)) {
+				pr_debug("unable to parse dcc command\n");
+				continue;
+			}
 
 				pr_debug("DCC bound ip/port: %pI4:%u\n",
 					 &dcc_ip, dcc_port);
