@@ -459,6 +459,13 @@ unsigned long move_page_tables(struct vm_area_struct *vma,
 			if (move_pgt_entry(NORMAL_PMD, vma, old_addr, new_addr,
 						old_end, old_pmd, new_pmd,
 						true))
+			bool moved;
+
+			take_rmap_locks(vma);
+			moved = move_normal_pmd(vma, old_addr, new_addr,
+					old_end, old_pmd, new_pmd);
+			drop_rmap_locks(vma);
+			if (moved)
 				continue;
 		}
 
