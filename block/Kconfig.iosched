@@ -58,25 +58,31 @@ config BFQ_CGROUP_DEBUG
 	files in a cgroup which can be useful for debugging.
 
 choice
-
-	prompt "Default I/O scheduler"
-	default DEFAULT_MQ_IOSCHED_SSG
+	prompt "Default mq I/O scheduler"
+	default MQ_DEADLINE_DEFAULT
 	help
-	  Select the I/O scheduler which will be used by default for all
-	  block devices.
+	  Select the I/O scheduler which will be used by default.
 
-	config DEFAULT_BFQ
-		bool "bfq" if IOSCHED_BFQ
+	config MQ_DEADLINE_DEFAULT
+		bool "MQ Deadline"
+		depends on MQ_IOSCHED_DEADLINE
 
-	config DEFAULT_MQ_IOSCHED_SSG
-		bool "ssg" if MQ_IOSCHED_SSG
+	config MQ_KYBER_DEFAULT
+		bool "MQ Kyber"
+		depends on MQ_IOSCHED_KYBER
+
+	config BFQ_DEFAULT
+		bool "BFQ"
+		depends on IOSCHED_BFQ
+
+	config MQ_SSG_DEFAULT
+		bool "SamSung Generic I/O scheduler"
+		depends on MQ_IOSCHED_SSG
+
+	config NONE_DEFAULT
+		bool "NONE"
 
 endchoice
-
-config DEFAULT_IOSCHED
-	string
-	default "ssg" if DEFAULT_MQ_IOSCHED_SSG
-	default "bfq" if DEFAULT_IOSCHED_BFQ
 
 endmenu
 
