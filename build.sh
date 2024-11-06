@@ -8,7 +8,7 @@ builddir="${kernel_dir}/build"
 ZIMAGE=$kernel_dir/out/arch/arm64/boot/Image
 kernel_name="torracat-tundra"
 zip_name="$kernel_name-$(date +"%d%m%Y-%H%M").zip"
-TC_DIR=$HOME/tc
+TC_DIR="${PWD}/tc"
 CLANG_DIR=$TC_DIR/clang-r522817
 export CONFIG_FILE="vendor/tundra-qgki_defconfig"
 export ARCH="arm64"
@@ -18,7 +18,7 @@ export KBUILD_BUILD_USER=raghav
 export PATH="$CLANG_DIR/bin:$PATH"
 if ! [ -d "$TC_DIR" ]; then
     echo "Toolchain not found! Cloning to $TC_DIR..."
-    if ! git clone -q --depth=1 --single-branch https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 -b master $TC_DIR; then
+    if ! git clone -q --depth=1 https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 -b master $TC_DIR; then
         echo "Cloning failed! Aborting..."
         exit 1
     fi
