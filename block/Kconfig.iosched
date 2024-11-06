@@ -57,6 +57,27 @@ config BFQ_CGROUP_DEBUG
 	Enable some debugging help. Currently it exports additional stat
 	files in a cgroup which can be useful for debugging.
 
+choice
+
+	prompt "Default I/O scheduler"
+	default DEFAULT_MQ_IOSCHED_SSG
+	help
+	  Select the I/O scheduler which will be used by default for all
+	  block devices.
+
+	config DEFAULT_BFQ
+		bool "bfq" if IOSCHED_BFQ
+
+	config DEFAULT_MQ_IOSCHED_SSG
+		bool "ssg" if MQ_IOSCHED_SSG
+
+endchoice
+
+config DEFAULT_IOSCHED
+	string
+	default "ssg" if DEFAULT_MQ_IOSCHED_SSG
+	default "bfq" if DEFAULT_IOSCHED_BFQ
+
 endmenu
 
 endif
