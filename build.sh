@@ -69,14 +69,12 @@ completion() {
         find . -name "*.zip" -type f -delete
         zip -r AnyKernel.zip *
         cp AnyKernel.zip $zip_name
-        cp $anykernel/$zip_name ${PWD}/$zip_name
+        cp $anykernel/$zip_name $kernel_dir/$zip_name
         rm -rf $anykernel
         END=$(date +"%s")
         DIFF=$(($END - $START))
         DIFF=$(($END - $START))
         echo -e "\nCompleted in $((SECONDS / 60)) minute(s) and $((SECONDS % 60)) second(s) !"
-        UPLOAD_URL=$(curl -F "file=@${PWD}/$zip_name" "http://bashupload.com/$(basename "$zip_name")")
-        echo "Link de download: $UPLOAD_URL"
         echo -e ${LGR} "############################################"
         echo -e ${LGR} "############# OkThisIsEpic!  ##############"
         echo -e ${LGR} "############################################${NC}"
@@ -91,3 +89,4 @@ make_defconfig
 compile
 completion
 cd ${kernel_dir}
+
