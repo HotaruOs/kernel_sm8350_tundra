@@ -6,7 +6,7 @@ objdir="${kernel_dir}/out"
 anykernel=${PWD}/anykernel
 builddir="${kernel_dir}/build"
 ZIMAGE=$kernel_dir/out/arch/arm64/boot/Image
-kernel_name="HuP"
+kernel_name="HuP-K1A"
 zip_name="$kernel_name-$(date +"%d%m%Y-%H%M").zip"
 TC_DIR="${PWD}/tc"
 CLANG_DIR=$TC_DIR/clang-r522817
@@ -18,11 +18,14 @@ export KBUILD_BUILD_USER=HotaruOs
 export PATH="$CLANG_DIR/bin:$PATH"
 if ! [ -d "$TC_DIR" ]; then
     echo "Toolchain not found! Cloning to $TC_DIR..."
-    if ! git clone -q --depth=1 https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 -b master $TC_DIR; then
+    if ! git clone --depth=1 https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 -b master $TC_DIR; then
         echo "Cloning failed! Aborting..."
         exit 1
     fi
 fi
+
+#Ksu
+rm -rf KernelSu & curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.9.5
 
 # Colors
 NC='\033[0m'
@@ -69,14 +72,12 @@ completion() {
         find . -name "*.zip" -type f -delete
         zip -r AnyKernel.zip *
         cp AnyKernel.zip $zip_name
-        cp $anykernel/$zip_name ${PWD}/$zip_name
+        cp $anykernel/$zip_name $kernel_dir/$zip_name
         rm -rf $anykernel
         END=$(date +"%s")
         DIFF=$(($END - $START))
         DIFF=$(($END - $START))
         echo -e "\nCompleted in $((SECONDS / 60)) minute(s) and $((SECONDS % 60)) second(s) !"
-        UPLOAD_URL=$(curl -F "file=@${PWD}/$zip_name" "http://bashupload.com/$(basename "$zip_name")")
-        echo "Link de download: $UPLOAD_URL"
         echo -e ${LGR} "############################################"
         echo -e ${LGR} "############# OkThisIsEpic!  ##############"
         echo -e ${LGR} "############################################${NC}"
