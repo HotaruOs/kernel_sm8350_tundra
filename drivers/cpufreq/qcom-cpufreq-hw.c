@@ -17,7 +17,7 @@
 #include <linux/pm_opp.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
-#include <linux/topology.h>
+#include <linux/moduleparam.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/dcvsh.h>
@@ -36,6 +36,9 @@
 
 #define CYCLE_CNTR_OFFSET(c, m, acc_count)				\
 			(acc_count ? ((c - cpumask_first(m) + 1) * 4) : 0)
+
+static bool hotaru_overclock = true;
+module_param(hotaru_overclock, bool, S_IRUGO);
 
 enum {
 	REG_ENABLE,
@@ -80,13 +83,6 @@ struct cpufreq_counter {
 	u32 prev_cycle_counter;
 	spinlock_t lock;
 };
-
-struct cpufreq_qcom_boost {
-	struct cpufreq_qcom *c;
-	unsigned int max_index;
-};
-
-static DEFINE_PER_CPU(struct cpufreq_qcom_boost, cpufreq_boost_pcpu);
 
 static const u16 cpufreq_qcom_std_offsets[REG_ARRAY_SIZE] = {
 	[REG_ENABLE]		= 0x0,
@@ -239,8 +235,6 @@ static u64 qcom_cpufreq_get_cpu_cycle_counter(int cpu)
 	}
 	cycle_counter_ret = cpu_counter->total_cycle_counter;
 	spin_unlock_irqrestore(&cpu_counter->lock, flags);
-
-	pr_debug("CPU %u, core-id 0x%x, offset %u\n", cpu, topology_core_id(cpu), offset);
 
 	return cycle_counter_ret;
 }
@@ -440,16 +434,6 @@ static struct cpufreq_driver cpufreq_qcom_hw_driver = {
 	.resume		= qcom_cpufreq_hw_resume,
 };
 
-static int cpuhp_qcom_online(unsigned int cpu)
-{
-	struct cpufreq_qcom_boost *b = &per_cpu(cpufreq_boost_pcpu, cpu);
-	struct cpufreq_qcom *c = b->c;
-
-	/* Set the max frequency by default before the governor takes over */
-	writel_relaxed(b->max_index, c->base + offsets[REG_PERF_STATE]);
-	return 0;
-}
-
 static int qcom_cpufreq_hw_read_lut(struct platform_device *pdev,
 				    struct cpufreq_qcom *c, u32 max_cores)
 {
@@ -484,8 +468,11 @@ static int qcom_cpufreq_hw_read_lut(struct platform_device *pdev,
 			freq = cpu_hw_rate / 1000;
 
 		c->table[i].frequency = freq;
-		dev_dbg(dev, "index=%d freq=%d, core_count %d\n",
-				i, c->table[i].frequency, core_count);
+		// dev_dbg(dev, "index=%d freq=%d, core_count %d\n",
+				// i, c->table[i].frequency, core_count);
+		dev_info(dev, "cpu=%lu, index=%d, freq=%d, core_count=%d, src=%d, lval=%d, volt=%d\n",
+				cpu, i, c->table[i].frequency, core_count,
+				src, lval, volt);
 
 		if (core_count != max_cores)
 			c->table[i].flags  = CPUFREQ_BOOST_FREQ;
@@ -504,12 +491,85 @@ static int qcom_cpufreq_hw_read_lut(struct platform_device *pdev,
 			dev_pm_opp_add(cpu_dev, freq * 1000, volt);
 	}
 
-	c->table[i].frequency = CPUFREQ_TABLE_END;
-	for_each_cpu(cpu, &c->related_cpus) {
-		per_cpu(cpufreq_boost_pcpu, cpu).c = c;
-		per_cpu(cpufreq_boost_pcpu, cpu).max_index = i - 1;
-	}
+	static struct cpufreq_frequency_table custom_freq_table_cpu0[] = {
+         { .frequency = 364800 },
+         { .frequency = 441600 },
+         { .frequency = 595200 },
+         { .frequency = 787200 },
+         { .frequency = 902400 },
+         { .frequency = 1017600 },
+         { .frequency = 1113600 },
+         { .frequency = 1228800 },
+         { .frequency = 1344000 },
+         { .frequency = 1478400 },
+         { .frequency = 1593600 },
+         { .frequency = 1708800 },
+         { .frequency = 1843200 },
+         { .frequency = 1900800 },
+         { .frequency = 2016000 },
+	 { .frequency = 2112000 },
+	 { .frequency = 2265200 },
+         { .frequency = CPUFREQ_TABLE_END }
+};
 
+       if (hotaru_overclock) {
+          if (cpu == 0) {
+          c->table = custom_freq_table_cpu0;
+       }
+}
+
+        static struct cpufreq_frequency_table custom_freq_table_cpu4[] = {
+         { .frequency = 480000 },
+         { .frequency = 633600 },
+         { .frequency = 787200 },
+         { .frequency = 940800 },
+         { .frequency = 1056000 },
+         { .frequency = 1286400 },
+         { .frequency = 1401600 },
+         { .frequency = 1593600 },
+         { .frequency = 1708800 },
+         { .frequency = 1920000 },
+         { .frequency = 2112000 },
+         { .frequency = 2227200 },
+         { .frequency = 2342400 },
+	 { .frequency = 2519200 },
+         { .frequency = CPUFREQ_TABLE_END }
+};
+
+       if (hotaru_overclock) {
+          if (cpu == 4) {
+          c->table = custom_freq_table_cpu4;
+      }
+}
+
+	static struct cpufreq_frequency_table custom_freq_table_cpu7[] = {
+         { .frequency = 480000 },
+         { .frequency = 633600 },
+         { .frequency = 787200 },
+         { .frequency = 960000 },
+         { .frequency = 1094400 },
+         { .frequency = 1209600 },
+         { .frequency = 1324800 },
+         { .frequency = 1459200 },
+         { .frequency = 1651200 },
+         { .frequency = 1766400 },
+         { .frequency = 1900800 },
+         { .frequency = 2150400 },
+         { .frequency = 2304000 },
+         { .frequency = 2457600 },
+         { .frequency = 2668800 },
+         { .frequency = 2803200 },
+         { .frequency = 2918400 },
+	 { .frequency = 3014400 },
+         { .frequency = CPUFREQ_TABLE_END }
+};
+
+       if (hotaru_overclock) {
+          if (cpu == 7) {
+          c->table = custom_freq_table_cpu7;
+       }
+}
+	
 	if (cpu_dev)
 		dev_pm_opp_set_sharing_cpus(cpu_dev, &c->related_cpus);
 
@@ -634,12 +694,12 @@ static int qcom_cpu_resources_init(struct platform_device *pdev,
 		c->dcvsh_irq = of_irq_get(dev->of_node, index);
 		if (c->dcvsh_irq > 0) {
 			mutex_init(&c->dcvsh_lock);
-			INIT_DELAYED_WORK(&c->freq_poll_work,
+			INIT_DEFERRABLE_WORK(&c->freq_poll_work,
 					limits_dcvsh_poll);
 		}
-	}
+}
 
-	for_each_cpu(cpu_r, &c->related_cpus)
+for_each_cpu(cpu_r, &c->related_cpus)
 		qcom_freq_domain_map[cpu_r] = c;
 
 	return 0;
@@ -728,11 +788,6 @@ static int qcom_cpufreq_hw_driver_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "cycle counter cb failed to register\n");
 		return rc;
 	}
-
-	rc = cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE, "qcom-cpufreq:online",
-				       cpuhp_qcom_online, NULL);
-	if (rc)
-		dev_err(&pdev->dev, "CPUHP callback setup failed, rc=%d\n", rc);
 
 	of_platform_populate(pdev->dev.of_node, NULL, NULL, &pdev->dev);
 	dev_dbg(&pdev->dev, "QCOM CPUFreq HW driver initialized\n");
