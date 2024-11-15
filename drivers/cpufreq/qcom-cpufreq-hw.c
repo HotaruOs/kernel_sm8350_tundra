@@ -492,7 +492,7 @@ static int qcom_cpufreq_hw_read_lut(struct platform_device *pdev,
 	}
 
 	static struct cpufreq_frequency_table custom_freq_table_cpu0[] = {
-         { .frequency = 364800 },
+         { .frequency = 300000 },
          { .frequency = 441600 },
          { .frequency = 595200 },
          { .frequency = 787200 },
@@ -519,6 +519,7 @@ static int qcom_cpufreq_hw_read_lut(struct platform_device *pdev,
 }
 
         static struct cpufreq_frequency_table custom_freq_table_cpu4[] = {
+	 { .frequency = 300000 },
          { .frequency = 480000 },
          { .frequency = 633600 },
          { .frequency = 787200 },
@@ -543,6 +544,7 @@ static int qcom_cpufreq_hw_read_lut(struct platform_device *pdev,
 }
 
 	static struct cpufreq_frequency_table custom_freq_table_cpu7[] = {
+	 { .frequency = 300000 },
          { .frequency = 480000 },
          { .frequency = 633600 },
          { .frequency = 787200 },
