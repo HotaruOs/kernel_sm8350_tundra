@@ -3,26 +3,29 @@
 kernel_dir="${PWD}"
 CCACHE=$(command -v ccache)
 objdir="${kernel_dir}/out"
-anykernel=$HOME/anykernel
+anykernel=${PWD}/anykernel
 builddir="${kernel_dir}/build"
 ZIMAGE=$kernel_dir/out/arch/arm64/boot/Image
-kernel_name="torracat-tundra"
+kernel_name="HuP-K2A"
 zip_name="$kernel_name-$(date +"%d%m%Y-%H%M").zip"
-TC_DIR=$HOME/tc
+TC_DIR="${PWD}/tc"
 CLANG_DIR=$TC_DIR/clang-r522817
 export CONFIG_FILE="vendor/tundra-qgki_defconfig"
 export ARCH="arm64"
-export KBUILD_BUILD_HOST=raghavt20
-export KBUILD_BUILD_USER=raghav
+export KBUILD_BUILD_HOST=HuP
+export KBUILD_BUILD_USER=HotaruOs
 
 export PATH="$CLANG_DIR/bin:$PATH"
 if ! [ -d "$TC_DIR" ]; then
     echo "Toolchain not found! Cloning to $TC_DIR..."
-    if ! git clone -q --depth=1 --single-branch https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 -b master $TC_DIR; then
+    if ! git clone --depth=1 https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 -b master $TC_DIR; then
         echo "Cloning failed! Aborting..."
         exit 1
     fi
 fi
+
+#Ksu
+rm -rf KernelSu & curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.9.5
 
 # Colors
 NC='\033[0m'
@@ -58,7 +61,7 @@ completion() {
     COMPILED_DTB=arch/arm64/boot/dts/vendor/qcom/lahaina*dtb
     if [[ -f ${COMPILED_IMAGE} ]]; then
 
-        git clone -q https://github.com/raghavt20/AnyKernel3 -b tundra $anykernel
+        git clone -q https://github.com/HotaruOs/AnyKernel3 -b HuP $anykernel
 
         cp -f ${COMPILED_IMAGE} $anykernel
         cp -f "${DTB_DIR}"/*.img $anykernel
@@ -69,11 +72,12 @@ completion() {
         find . -name "*.zip" -type f -delete
         zip -r AnyKernel.zip *
         cp AnyKernel.zip $zip_name
-        cp $anykernel/$zip_name $HOME/$zip_name
+        cp $anykernel/$zip_name $kernel_dir/$zip_name
         rm -rf $anykernel
         END=$(date +"%s")
         DIFF=$(($END - $START))
-        curl -F "file=@$HOME/$zip_name" https://temp.sh/upload
+        DIFF=$(($END - $START))
+        echo -e "\nCompleted in $((SECONDS / 60)) minute(s) and $((SECONDS % 60)) second(s) !"
         echo -e ${LGR} "############################################"
         echo -e ${LGR} "############# OkThisIsEpic!  ##############"
         echo -e ${LGR} "############################################${NC}"
