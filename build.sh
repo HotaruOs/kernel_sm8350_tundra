@@ -25,7 +25,7 @@ if ! [ -d "$TC_DIR" ]; then
 fi
 
 #Ksu
-rm -rf KernelSu & curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.9.5
+rm -rf KernelSU && curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s main && git -C $(pwd)/KernelSU checkout 2dac1c7 && git -C $(pwd)/KernelSU revert --no-edit 898e9d4
 
 # Colors
 NC='\033[0m'
