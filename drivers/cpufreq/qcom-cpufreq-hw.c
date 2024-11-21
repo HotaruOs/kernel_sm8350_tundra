@@ -17,6 +17,7 @@
 #include <linux/pm_opp.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
+#include <linux/moduleparam.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/dcvsh.h>
@@ -30,11 +31,14 @@
 #define CLK_HW_DIV			2
 #define GT_IRQ_STATUS			BIT(2)
 #define MAX_FN_SIZE			20
-#define LIMITS_POLLING_DELAY_MS		10
+#define LIMITS_POLLING_DELAY_MS		4
 #define MAX_ROW				2
 
 #define CYCLE_CNTR_OFFSET(c, m, acc_count)				\
 			(acc_count ? ((c - cpumask_first(m) + 1) * 4) : 0)
+
+static bool hotaru_overclock = true;
+module_param(hotaru_overclock, bool, S_IRUGO);
 
 enum {
 	REG_ENABLE,
@@ -79,13 +83,6 @@ struct cpufreq_counter {
 	u32 prev_cycle_counter;
 	spinlock_t lock;
 };
-
-struct cpufreq_qcom_boost {
-	struct cpufreq_qcom *c;
-	unsigned int max_index;
-};
-
-static DEFINE_PER_CPU(struct cpufreq_qcom_boost, cpufreq_boost_pcpu);
 
 static const u16 cpufreq_qcom_std_offsets[REG_ARRAY_SIZE] = {
 	[REG_ENABLE]		= 0x0,
@@ -437,16 +434,6 @@ static struct cpufreq_driver cpufreq_qcom_hw_driver = {
 	.resume		= qcom_cpufreq_hw_resume,
 };
 
-static int cpuhp_qcom_online(unsigned int cpu)
-{
-	struct cpufreq_qcom_boost *b = &per_cpu(cpufreq_boost_pcpu, cpu);
-	struct cpufreq_qcom *c = b->c;
-
-	/* Set the max frequency by default before the governor takes over */
-	writel_relaxed(b->max_index, c->base + offsets[REG_PERF_STATE]);
-	return 0;
-}
-
 static int qcom_cpufreq_hw_read_lut(struct platform_device *pdev,
 				    struct cpufreq_qcom *c, u32 max_cores)
 {
@@ -481,8 +468,11 @@ static int qcom_cpufreq_hw_read_lut(struct platform_device *pdev,
 			freq = cpu_hw_rate / 1000;
 
 		c->table[i].frequency = freq;
-		dev_dbg(dev, "index=%d freq=%d, core_count %d\n",
-				i, c->table[i].frequency, core_count);
+		// dev_dbg(dev, "index=%d freq=%d, core_count %d\n",
+				// i, c->table[i].frequency, core_count);
+		dev_info(dev, "cpu=%lu, index=%d, freq=%d, core_count=%d, src=%d, lval=%d, volt=%d\n",
+				cpu, i, c->table[i].frequency, core_count,
+				src, lval, volt);
 
 		if (core_count != max_cores)
 			c->table[i].flags  = CPUFREQ_BOOST_FREQ;
@@ -501,11 +491,24 @@ static int qcom_cpufreq_hw_read_lut(struct platform_device *pdev,
 			dev_pm_opp_add(cpu_dev, freq * 1000, volt);
 	}
 
+    if (hotaru_overclock) {
+    if (cpu == 0) {
+        c->table[i++].frequency = 1843200;
+        c->table[i++].frequency = 1900800;
+        c->table[i++].frequency = 2016000;
+    } else if (cpu == 4) {
+        c->table[0].frequency = 300000;
+        c->table[1].frequency = 480000;
+        c->table[2].frequency = 633600;
+    } else if (cpu == 7) {
+        c->table[0].frequency = 300000;
+        c->table[1].frequency = 480000;
+        c->table[2].frequency = 633600;
+        c->table[3].frequency = 710400;
+    }
+}
+    
 	c->table[i].frequency = CPUFREQ_TABLE_END;
-	for_each_cpu(cpu, &c->related_cpus) {
-		per_cpu(cpufreq_boost_pcpu, cpu).c = c;
-		per_cpu(cpufreq_boost_pcpu, cpu).max_index = i - 1;
-	}
 
 	if (cpu_dev)
 		dev_pm_opp_set_sharing_cpus(cpu_dev, &c->related_cpus);
@@ -725,11 +728,6 @@ static int qcom_cpufreq_hw_driver_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "cycle counter cb failed to register\n");
 		return rc;
 	}
-
-	rc = cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE, "qcom-cpufreq:online",
-				       cpuhp_qcom_online, NULL);
-	if (rc)
-		dev_err(&pdev->dev, "CPUHP callback setup failed, rc=%d\n", rc);
 
 	of_platform_populate(pdev->dev.of_node, NULL, NULL, &pdev->dev);
 	dev_dbg(&pdev->dev, "QCOM CPUFreq HW driver initialized\n");
