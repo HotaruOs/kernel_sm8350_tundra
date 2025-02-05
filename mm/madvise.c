@@ -168,12 +168,6 @@ static long madvise_behavior(struct vm_area_struct *vma,
 	}
 
 success:
-	/*
-	 * vm_flags is protected by the mmap_sem held in write mode.
-	 */
-	vm_write_begin(vma);
-	WRITE_ONCE(vma->vm_flags, vma_pad_fixup_flags(vma, new_flags));
-	vm_write_end(vma);
 
 out_convert_errno:
 	/*
