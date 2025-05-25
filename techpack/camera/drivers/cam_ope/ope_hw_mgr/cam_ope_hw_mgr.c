@@ -783,8 +783,8 @@ static int32_t cam_ope_process_request_timer(void *priv, void *data)
 			.path_data_type -
 			CAM_AXI_PATH_DATA_OPE_START_OFFSET;
 
-		if (path_index >= CAM_OPE_MAX_PER_PATH_VOTES) {
-			CAM_WARN(CAM_OPE,
+		if (path_index >= CAM_OPE_MAX_PER_PATH_VOTES || path_index < 0) {
+			CAM_DBG(CAM_OPE,
 				"Invalid path %d, start offset=%d, max=%d",
 				ctx_data->clk_info.axi_path[i]
 				.path_data_type,
@@ -1466,8 +1466,8 @@ static bool cam_ope_update_bw_v2(struct cam_ope_hw_mgr *hw_mgr,
 		ctx_data->clk_info.axi_path[i].path_data_type -
 		CAM_AXI_PATH_DATA_OPE_START_OFFSET;
 
-		if (path_index >= CAM_OPE_MAX_PER_PATH_VOTES) {
-			CAM_WARN(CAM_OPE,
+		if (path_index >= CAM_OPE_MAX_PER_PATH_VOTES || path_index < 0) {
+			CAM_DBG(CAM_OPE,
 				"Invalid path %d, start offset=%d, max=%d",
 				ctx_data->clk_info.axi_path[i].path_data_type,
 				CAM_AXI_PATH_DATA_OPE_START_OFFSET,
@@ -1503,8 +1503,8 @@ static bool cam_ope_update_bw_v2(struct cam_ope_hw_mgr *hw_mgr,
 		ctx_data->clk_info.axi_path[i].path_data_type -
 			CAM_AXI_PATH_DATA_OPE_START_OFFSET;
 
-		if (path_index >= CAM_OPE_MAX_PER_PATH_VOTES) {
-			CAM_WARN(CAM_OPE,
+		if (path_index >= CAM_OPE_MAX_PER_PATH_VOTES || path_index < 0) {
+			CAM_DBG(CAM_OPE,
 				"Invalid path %d, start offset=%d, max=%d",
 				ctx_data->clk_info.axi_path[i].path_data_type,
 				CAM_AXI_PATH_DATA_OPE_START_OFFSET,
@@ -1791,7 +1791,7 @@ static int cam_ope_mgr_create_kmd_buf(struct cam_ope_hw_mgr *hw_mgr,
 	prepare_req.frame_process =
 		(struct ope_frame_process *)ope_cmd_buf_addr;
 
-	for (i = 0; i < ope_hw_mgr->num_ope; i++)
+	for (i = 0; i < ope_hw_mgr->num_ope; i++) {
 		rc = hw_mgr->ope_dev_intf[i]->hw_ops.process_cmd(
 			hw_mgr->ope_dev_intf[i]->hw_priv,
 			OPE_HW_PREPARE, &prepare_req, sizeof(prepare_req));
@@ -1799,6 +1799,7 @@ static int cam_ope_mgr_create_kmd_buf(struct cam_ope_hw_mgr *hw_mgr,
 			CAM_ERR(CAM_OPE, "OPE Dev prepare failed: %d", rc);
 			goto end;
 		}
+	}
 
 end:
 	return rc;
@@ -2192,6 +2193,14 @@ static int cam_ope_mgr_process_cmd_buf_req(struct cam_ope_hw_mgr *hw_mgr,
 						hw_mgr->iommu_hdl);
 					goto end;
 				}
+				if ((len <= frame_process->cmd_buf[i][j].offset) ||
+					(frame_process->cmd_buf[i][j].size <
+					frame_process->cmd_buf[i][j].length) ||
+					((len - frame_process->cmd_buf[i][j].offset) <
+					 frame_process->cmd_buf[i][j].length)) {
+					CAM_ERR(CAM_OPE, "Invalid offset.");
+					return -EINVAL;
+				}
 				cpu_addr = cpu_addr +
 					frame_process->cmd_buf[i][j].offset;
 				CAM_DBG(CAM_OPE, "Hdl %x size %d len %d off %d",
@@ -2240,6 +2249,10 @@ static int cam_ope_mgr_process_cmd_buf_req(struct cam_ope_hw_mgr *hw_mgr,
 				uint32_t s_idx = 0;
 
 				s_idx = cmd_buf->stripe_idx;
+				if (s_idx < 0 || s_idx >= OPE_MAX_STRIPES) {
+					CAM_ERR(CAM_OPE, "Invalid index.");
+					return -EINVAL;
+				}
 				num_cmd_bufs =
 				ope_request->num_stripe_cmd_bufs[i][s_idx];
 
@@ -2887,8 +2900,8 @@ static int cam_ope_mgr_remove_bw(struct cam_ope_hw_mgr *hw_mgr, int ctx_id)
 		ctx_data->clk_info.axi_path[i].path_data_type -
 		CAM_AXI_PATH_DATA_OPE_START_OFFSET;
 
-		if (path_index >= CAM_OPE_MAX_PER_PATH_VOTES) {
-			CAM_WARN(CAM_OPE,
+		if (path_index >= CAM_OPE_MAX_PER_PATH_VOTES || path_index < 0) {
+			CAM_DBG(CAM_OPE,
 				"Invalid path %d, start offset=%d, max=%d",
 				ctx_data->clk_info.axi_path[i].path_data_type,
 				CAM_AXI_PATH_DATA_OPE_START_OFFSET,
@@ -3535,7 +3548,7 @@ static int cam_ope_mgr_hw_open_u(void *hw_priv, void *fw_download_args)
 	return rc;
 }
 
-static cam_ope_mgr_hw_close_u(void *hw_priv, void *hw_close_args)
+static int cam_ope_mgr_hw_close_u(void *hw_priv, void *hw_close_args)
 {
 	struct cam_ope_hw_mgr *hw_mgr;
 	int rc = 0;

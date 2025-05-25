@@ -9549,37 +9549,6 @@ static void parse_cps_configuration(struct platform_device *pdev,
 	}
 }
 
-static int dmic_enable_supplies(struct platform_device *pdev)
-{
-	int ret = 0;
-	struct snd_soc_card *card = platform_get_drvdata(pdev);
-	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
-
-	/* Parse power supplies */
-	msm_cdc_get_power_supplies(&pdev->dev, &pdata->regulator,
-		&pdata->num_supplies);
-	if (!pdata->regulator || (pdata->num_supplies <= 0)) {
-		pr_err("%s: no power supplies defined\n", __func__);
-		return -EINVAL;
-	}
-
-	ret = msm_cdc_init_supplies(&pdev->dev, &pdata->supplies,
-		pdata->regulator, pdata->num_supplies);
-	if (!pdata->supplies) {
-		pr_err("%s: Cannot init dmic supplies\n", __func__);
-		return ret;
-	}
-
-	ret = msm_cdc_enable_static_supplies(&pdev->dev, pdata->supplies,
-		pdata->regulator,
-		pdata->num_supplies);
-
-	if (ret)
-		pr_err("%s: dmic static supply enable failed!\n", __func__);
-
-	return ret;
-}
-
 static int msm_parse_ext_mclk_gpios(struct snd_soc_card *card,
 				    struct ext_mclk_gpio_info **ext_mclk_gpios)
 {
@@ -9982,6 +9951,37 @@ static int lahaina_ext_mclk_cfg_init(struct snd_soc_card *card)
 
 deinit:
 	lahaina_ext_mclk_cfg_deinit(card);
+	return ret;
+}
+
+static int dmic_enable_supplies(struct platform_device *pdev)
+{
+	int ret = 0;
+	struct snd_soc_card *card = platform_get_drvdata(pdev);
+	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
+
+	/* Parse power supplies */
+	msm_cdc_get_power_supplies(&pdev->dev, &pdata->regulator,
+		&pdata->num_supplies);
+	if (!pdata->regulator || (pdata->num_supplies <= 0)) {
+		pr_err("%s: no power supplies defined\n", __func__);
+		return -EINVAL;
+	}
+
+	ret = msm_cdc_init_supplies(&pdev->dev, &pdata->supplies,
+		pdata->regulator, pdata->num_supplies);
+	if (!pdata->supplies) {
+		pr_err("%s: Cannot init dmic supplies\n", __func__);
+		return ret;
+	}
+
+	ret = msm_cdc_enable_static_supplies(&pdev->dev, pdata->supplies,
+		pdata->regulator,
+		pdata->num_supplies);
+
+	if (ret)
+		pr_err("%s: dmic static supply enable failed!\n", __func__);
+
 	return ret;
 }
 

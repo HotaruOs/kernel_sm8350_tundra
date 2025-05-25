@@ -81,7 +81,7 @@ int nl_srv_ucast(struct sk_buff *skb, int dst_pid, int flag,
 int nl_srv_bcast(struct sk_buff *skb, int mcgroup_id, int app_id);
 
 /**
- * nl80211hdr_put_qca() - API to fill genlmsg header
+ * nl80211hdr_put() - API to fill genlmsg header
  * @skb: Sk buffer
  * @portid: Port ID
  * @seq: Sequence number

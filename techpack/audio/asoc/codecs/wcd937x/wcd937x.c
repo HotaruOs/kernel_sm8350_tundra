@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -315,6 +315,10 @@ static int wcd937x_parse_port_mapping(struct device *dev,
 
 	for (i = 0; i < map_length; i++) {
 		port_num = dt_array[NUM_SWRS_DT_PARAMS * i];
+		if (port_num >= MAX_PORT || ch_iter >= MAX_CH_PER_PORT) {
+			dev_err(dev, "%s: Invalid port or channel number\n", __func__);
+			goto err_pdata_fail;
+		}
 		slave_port_type = dt_array[NUM_SWRS_DT_PARAMS * i + 1];
 		ch_mask = dt_array[NUM_SWRS_DT_PARAMS * i + 2];
 		ch_rate = dt_array[NUM_SWRS_DT_PARAMS * i + 3];
@@ -2093,7 +2097,7 @@ static const char * const rx_hph_mode_mux_text[] = {
 	"CLS_H_ULP", "CLS_AB_HIFI",
 };
 
-const char * const tx_master_ch_text_wcd937x[] = {
+static const char * const tx_master_ch_text[] = {
 	"ZERO", "SWRM_TX1_CH1", "SWRM_TX1_CH2", "SWRM_TX1_CH3", "SWRM_TX1_CH4",
 	"SWRM_TX2_CH1", "SWRM_TX2_CH2", "SWRM_TX2_CH3", "SWRM_TX2_CH4",
 	"SWRM_TX3_CH1", "SWRM_TX3_CH2", "SWRM_TX3_CH3", "SWRM_TX3_CH4",
@@ -2101,9 +2105,9 @@ const char * const tx_master_ch_text_wcd937x[] = {
 	"DMIC4", "DMIC5", "DMIC6", "DMIC7",
 };
 
-const struct soc_enum tx_master_ch_enum_wcd937x =
-	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tx_master_ch_text_wcd937x),
-					tx_master_ch_text_wcd937x);
+static const struct soc_enum tx_master_ch_enum =
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tx_master_ch_text),
+					tx_master_ch_text);
 
 static void wcd937x_tx_get_slave_ch_type_idx(const char *wname, int *ch_idx)
 {
@@ -2241,25 +2245,25 @@ static const struct snd_kcontrol_new wcd937x_snd_controls[] = {
 			analog_gain),
 	SOC_SINGLE_TLV("ADC3 Volume", WCD937X_ANA_TX_CH3, 0, 20, 0,
 			analog_gain),
-	SOC_ENUM_EXT("ADC1 ChMap", tx_master_ch_enum_wcd937x,
+	SOC_ENUM_EXT("ADC1 ChMap", tx_master_ch_enum,
 			wcd937x_tx_master_ch_get, wcd937x_tx_master_ch_put),
-	SOC_ENUM_EXT("ADC2 ChMap", tx_master_ch_enum_wcd937x,
+	SOC_ENUM_EXT("ADC2 ChMap", tx_master_ch_enum,
 			wcd937x_tx_master_ch_get, wcd937x_tx_master_ch_put),
-	SOC_ENUM_EXT("ADC3 ChMap", tx_master_ch_enum_wcd937x,
+	SOC_ENUM_EXT("ADC3 ChMap", tx_master_ch_enum,
 			wcd937x_tx_master_ch_get, wcd937x_tx_master_ch_put),
-	SOC_ENUM_EXT("DMIC0 ChMap", tx_master_ch_enum_wcd937x,
+	SOC_ENUM_EXT("DMIC0 ChMap", tx_master_ch_enum,
 			wcd937x_tx_master_ch_get, wcd937x_tx_master_ch_put),
-	SOC_ENUM_EXT("DMIC1 ChMap", tx_master_ch_enum_wcd937x,
+	SOC_ENUM_EXT("DMIC1 ChMap", tx_master_ch_enum,
 			wcd937x_tx_master_ch_get, wcd937x_tx_master_ch_put),
-	SOC_ENUM_EXT("MBHC ChMap", tx_master_ch_enum_wcd937x,
+	SOC_ENUM_EXT("MBHC ChMap", tx_master_ch_enum,
 			wcd937x_tx_master_ch_get, wcd937x_tx_master_ch_put),
-	SOC_ENUM_EXT("DMIC2 ChMap", tx_master_ch_enum_wcd937x,
+	SOC_ENUM_EXT("DMIC2 ChMap", tx_master_ch_enum,
 			wcd937x_tx_master_ch_get, wcd937x_tx_master_ch_put),
-	SOC_ENUM_EXT("DMIC3 ChMap", tx_master_ch_enum_wcd937x,
+	SOC_ENUM_EXT("DMIC3 ChMap", tx_master_ch_enum,
 			wcd937x_tx_master_ch_get, wcd937x_tx_master_ch_put),
-	SOC_ENUM_EXT("DMIC4 ChMap", tx_master_ch_enum_wcd937x,
+	SOC_ENUM_EXT("DMIC4 ChMap", tx_master_ch_enum,
 			wcd937x_tx_master_ch_get, wcd937x_tx_master_ch_put),
-	SOC_ENUM_EXT("DMIC5 ChMap", tx_master_ch_enum_wcd937x,
+	SOC_ENUM_EXT("DMIC5 ChMap", tx_master_ch_enum,
 			wcd937x_tx_master_ch_get, wcd937x_tx_master_ch_put),
 	SOC_ENUM_EXT("TX CH1 PWR", wcd937x_tx_ch_pwr_level_enum,
 		wcd937x_tx_ch_pwr_level_get, wcd937x_tx_ch_pwr_level_put),

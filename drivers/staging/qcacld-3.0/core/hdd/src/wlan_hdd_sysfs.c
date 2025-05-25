@@ -718,22 +718,12 @@ static void hdd_sysfs_destroy_bcn_reception_interface(struct hdd_adapter
 {
 	device_remove_file(&adapter->dev->dev, &dev_attr_beacon_stats);
 }
-#else
-static inline int hdd_sysfs_create_bcn_reception_interface(struct hdd_adapter
-						     *adapter)
-{
-	return 0;
-}
 
-static inline void hdd_sysfs_destroy_bcn_reception_interface(struct hdd_adapter
-						      *adapter)
-{}
 #endif
 
 static void
 hdd_sysfs_create_sta_adapter_root_obj(struct hdd_adapter *adapter)
 {
-	hdd_sysfs_create_bcn_reception_interface(adapter);
 	hdd_sysfs_reassoc_create(adapter);
 	hdd_sysfs_crash_inject_create(adapter);
 	hdd_sysfs_suspend_create(adapter);
@@ -781,7 +771,6 @@ hdd_sysfs_destroy_sta_adapter_root_obj(struct hdd_adapter *adapter)
 	hdd_sysfs_suspend_destroy(adapter);
 	hdd_sysfs_crash_inject_destroy(adapter);
 	hdd_sysfs_reassoc_destroy(adapter);
-	hdd_sysfs_destroy_bcn_reception_interface(adapter);
 }
 
 static void

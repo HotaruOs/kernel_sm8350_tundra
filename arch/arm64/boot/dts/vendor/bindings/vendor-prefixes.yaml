@@ -27,6 +27,11 @@ patternProperties:
     description: Abilis Systems
   "^abracon,.*":
     description: Abracon Corporation
+<<<<<<< HEAD
+=======
+  "^acme,.*":
+    description: Acme Systems srl
+>>>>>>> 1205a2f20109 (Merge https://github.com/LineageOS/android_kernel_qcom_sm8350 into pão)
   "^actions,.*":
     description: Actions Semiconductor Co., Ltd.
   "^active-semi,.*":
@@ -81,8 +86,13 @@ patternProperties:
     description: Analogix Semiconductor, Inc.
   "^andestech,.*":
     description: Andes Technology Corporation
+<<<<<<< HEAD
   "^android,.*":
     description: Google Inc.
+=======
+  "^anvo,.*":
+    description: Anvo-Systems Dresden GmbH
+>>>>>>> 1205a2f20109 (Merge https://github.com/LineageOS/android_kernel_qcom_sm8350 into pão)
   "^apm,.*":
     description: Applied Micro Circuits Corporation (APM)
   "^aptina,.*":
@@ -271,6 +281,11 @@ patternProperties:
     description: Emerging Display Technologies
   "^eeti,.*":
     description: eGalax_eMPIA Technology Inc
+<<<<<<< HEAD
+=======
+  "^einfochips,.*":
+    description: Einfochips
+>>>>>>> 1205a2f20109 (Merge https://github.com/LineageOS/android_kernel_qcom_sm8350 into pão)
   "^elan,.*":
     description: Elan Microelectronic Corp.
   "^elgin,.*":
@@ -333,8 +348,11 @@ patternProperties:
     description: Firefly
   "^focaltech,.*":
     description: FocalTech Systems Co.,Ltd
+<<<<<<< HEAD
   "^novatek,.*":
     description: NOVATEK Microelectronics Corporation
+=======
+>>>>>>> 1205a2f20109 (Merge https://github.com/LineageOS/android_kernel_qcom_sm8350 into pão)
   "^friendlyarm,.*":
     description: Guangzhou FriendlyARM Computer Tech Co., Ltd
   "^fsl,.*":
@@ -441,6 +459,11 @@ patternProperties:
     description: Innolux Corporation
   "^inside-secure,.*":
     description: INSIDE Secure
+<<<<<<< HEAD
+=======
+  "^inspur,.*":
+    description: Inspur Corporation
+>>>>>>> 1205a2f20109 (Merge https://github.com/LineageOS/android_kernel_qcom_sm8350 into pão)
   "^intel,.*":
     description: Intel Corporation
   "^intercontrol,.*":
@@ -507,6 +530,11 @@ patternProperties:
     description: Lantiq Semiconductor
   "^lattice,.*":
     description: Lattice Semiconductor
+<<<<<<< HEAD
+=======
+  "^leez,.*":
+    description: Leez
+>>>>>>> 1205a2f20109 (Merge https://github.com/LineageOS/android_kernel_qcom_sm8350 into pão)
   "^lego,.*":
     description: LEGO Systems A/S
   "^lemaker,.*":
@@ -515,6 +543,11 @@ patternProperties:
     description: Lenovo Group Ltd.
   "^lg,.*":
     description: LG Corporation
+<<<<<<< HEAD
+=======
+  "^lgphilips,.*":
+    description: LG Display
+>>>>>>> 1205a2f20109 (Merge https://github.com/LineageOS/android_kernel_qcom_sm8350 into pão)
   "^libretech,.*":
     description: Shenzhen Libre Technology Co., Ltd
   "^licheepi,.*":
@@ -533,12 +566,20 @@ patternProperties:
     description: Linear Technology Corporation
   "^logicpd,.*":
     description: Logic PD, Inc.
+<<<<<<< HEAD
+=======
+  "^longcheer,.*":
+    description: Longcheer Technology (Shanghai) Co., Ltd.
+>>>>>>> 1205a2f20109 (Merge https://github.com/LineageOS/android_kernel_qcom_sm8350 into pão)
   "^lsi,.*":
     description: LSI Corp. (LSI Logic)
   "^lwn,.*":
     description: Liebherr-Werk Nenzing GmbH
+<<<<<<< HEAD
   "^lt,.*":
     description: Lontium Semiconductor Corporation
+=======
+>>>>>>> 1205a2f20109 (Merge https://github.com/LineageOS/android_kernel_qcom_sm8350 into pão)
   "^macnica,.*":
     description: Macnica Americas
   "^mapleboard,.*":
@@ -555,6 +596,11 @@ patternProperties:
     description: mCube
   "^meas,.*":
     description: Measurement Specialties
+<<<<<<< HEAD
+=======
+  "^mecer,.*":
+    description: Mustek Limited
+>>>>>>> 1205a2f20109 (Merge https://github.com/LineageOS/android_kernel_qcom_sm8350 into pão)
   "^mediatek,.*":
     description: MediaTek Inc.
   "^megachips,.*":
@@ -581,6 +627,11 @@ patternProperties:
     description: Micro Crystal AG
   "^micron,.*":
     description: Micron Technology Inc.
+<<<<<<< HEAD
+=======
+  "^microsoft,.*":
+    description: Microsoft Corporation
+>>>>>>> 1205a2f20109 (Merge https://github.com/LineageOS/android_kernel_qcom_sm8350 into pão)
   "^mikroe,.*":
     description: MikroElektronika d.o.o.
   "^miniand,.*":
@@ -763,8 +814,11 @@ patternProperties:
     description: QiaoDian XianShi Corporation
   "^qnap,.*":
     description: QNAP Systems, Inc.
+<<<<<<< HEAD
   "^qvm,.*":
     description: BlackBerry Ltd
+=======
+>>>>>>> 1205a2f20109 (Merge https://github.com/LineageOS/android_kernel_qcom_sm8350 into pão)
   "^radxa,.*":
     description: Radxa
   "^raidsonic,.*":
@@ -823,6 +877,11 @@ patternProperties:
     description: Semtech Corporation
   "^sensirion,.*":
     description: Sensirion AG
+<<<<<<< HEAD
+=======
+  "^sensortek,.*":
+    description: Sensortek Technology Corporation
+>>>>>>> 1205a2f20109 (Merge https://github.com/LineageOS/android_kernel_qcom_sm8350 into pão)
   "^sff,.*":
     description: Small Form Factor Committee
   "^sgd,.*":
@@ -907,7 +966,11 @@ patternProperties:
     description: Sun Microsystems, Inc
   "^swir,.*":
     description: Sierra Wireless
+<<<<<<< HEAD
   "^synaptics,.*":
+=======
+  "^syna,.*":
+>>>>>>> 1205a2f20109 (Merge https://github.com/LineageOS/android_kernel_qcom_sm8350 into pão)
     description: Synaptics Inc.
   "^synology,.*":
     description: Synology, Inc.
@@ -943,6 +1006,12 @@ patternProperties:
     description: Tecon Microprocessor Technologies, LLC.
   "^topeet,.*":
     description: Topeet
+<<<<<<< HEAD
+=======
+  "^toppoly,.*":
+    description: TPO (deprecated, use tpo)
+    deprecated: true
+>>>>>>> 1205a2f20109 (Merge https://github.com/LineageOS/android_kernel_qcom_sm8350 into pão)
   "^toradex,.*":
     description: Toradex AG
   "^toshiba,.*":
@@ -1057,8 +1126,11 @@ patternProperties:
     description: ZTE Corp.
   "^zyxel,.*":
     description: ZyXEL Communications Corp.
+<<<<<<< HEAD
   "^awinic,.*":
     description: Shanghai Awinic Electronic Technology Co., LTD.
+=======
+>>>>>>> 1205a2f20109 (Merge https://github.com/LineageOS/android_kernel_qcom_sm8350 into pão)
 
   # Normal property name match without a comma
   # These should catch all node/property names without a prefix
