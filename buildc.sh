@@ -8,38 +8,19 @@ builddir="${kernel_dir}/build"
 ZIMAGE=$kernel_dir/out/arch/arm64/boot/Image
 kernel_name="HuPao"
 zip_name="$kernel_name-$(date +"%d%m%Y-%H%M").zip"
-GCC_DIR="${PWD}/gnu-gcc"
+TC_DIR="${PWD}/tc"
 export CONFIG_FILE="vendor/lahaina-qgki_defconfig"
 export ARCH="arm64"
 export KBUILD_BUILD_HOST=Pão
 export KBUILD_BUILD_USER=HotaruOs
 
-if ! [ -d "$GCC_DIR/arm-gnu-toolchain-14.2.rel1-aarch64-aarch64-none-linux-gnu" ] || \
-   ! [ -d "$GCC_DIR/arm-gnu-toolchain-14.2.rel1-aarch64-arm-none-linux-gnueabihf" ]; then
-    echo "GNU-GCC não encontrado! Baixando..."
-    mkdir -p "$GCC_DIR"
-
-    wget -c https://developer.arm.com/-/media/Files/downloads/gnu/14.2.rel1/binrel/arm-gnu-toolchain-14.2.rel1-aarch64-aarch64-none-linux-gnu.tar.xz \
-        -O /tmp/gnu-gcc-arm64.tar.xz
-    wget -c https://developer.arm.com/-/media/Files/downloads/gnu/14.2.rel1/binrel/arm-gnu-toolchain-14.2.rel1-aarch64-arm-none-linux-gnueabihf.tar.xz \
-        -O /tmp/gnu-gcc-arm32.tar.xz
-
-    if [ $? -ne 0 ]; then
-        echo "Erro: Falha no download do GNU-GCC."
-        exit 1
-    fi
-
-    tar -xf /tmp/gnu-gcc-arm64.tar.xz -C "$GCC_DIR"
-    tar -xf /tmp/gnu-gcc-arm32.tar.xz -C "$GCC_DIR"
-
-    if [ $? -ne 0 ]; then
-        echo "Erro: Falha ao extrair o GNU-GCC."
-        exit 1
-    fi
-
-    echo "GNU-GCC instalado com sucesso em $GCC_DIR."
-else
-    echo "GNU-GCC já está instalado em $GCC_DIR."
+export PATH="$TC_DIR/bin:$PATH"
+if ! [ -d "$TC_DIR" ]; then
+	echo "AOSP clang not found! Cloning to $TC_DIR..."
+	if ! git clone --depth=1 -b 18 https://gitlab.com/ThankYouMario/android_prebuilts_clang-standalone "$TC_DIR"; then
+		echo "Cloning failed! Aborting..."
+		exit 1
+	fi
 fi
 
 # Colors
@@ -48,33 +29,27 @@ RED='\033[0;31m'
 LRD='\033[1;31m'
 LGR='\033[1;32m'
 
-GCC_ARM64="$GCC_DIR/arm-gnu-toolchain-14.2.rel1-aarch64-aarch64-none-linux-gnu"
-GCC_ARM32="$GCC_DIR/arm-gnu-toolchain-14.2.rel1-aarch64-arm-none-linux-gnueabihf"
-
-export PATH="$GCC_ARM64/bin:$GCC_ARM32/bin:$PATH"
-
-echo -e "${LGR}######### Versão do GCC #########${NC}"
-echo "Versão do GCC ARM64: $($GCC_ARM64/bin/aarch64-none-linux-gnu-gcc --version)"
+echo -e "${LGR}######### Versão do Clang #########${NC}"
+$TC_DIR/bin/clang --version
 
 make_defconfig() {
-    echo -e ${LGR} "########### Gerando Defconfig ############${NC}"
-    make -s ARCH=${ARCH} O=${objdir} ${CONFIG_FILE} -j$(nproc --all)
+    START=$(date +"%s")
+    echo -e ${LGR} "########### Generating Defconfig ############${NC}"
+    make -s ARCH=${ARCH} O=${objdir} CC=clang HOSTCC=clang ${CONFIG_FILE} LLVM=1 LLVM_IAS=1 -j$(nproc --all)
 }
-
-KBUILD_COMPILER_STRING="$GCC_ARM64/bin/arch64-none-linux-gnu- --version | head -n 1)"
 
 compile() {
     cd ${kernel_dir}
-    echo -e ${LGR} "######### Compilando Kernel #########${NC}"
+    echo -e ${LGR} "######### Compiling kernel #########${NC}"
     make -j$(nproc --all) \
     O=out \
-    ARCH=${ARCH} \
-    CC="gcc" \
-    CROSS_COMPILE="$GCC_ARM64/bin/aarch64-none-linux-gnu-" \
-    CROSS_COMPILE_ARM32="$GCC_ARM32/bin/arm-none-linux-gnueabihf-" \
-    AR=aarch64-none-linux-gnu-ar \
-    OBJDUMP=aarch64-none-linux-gnu-objdump \
-    STRIP=aarch64-none-linux-gnu-strip
+    ARCH=${ARCH}\
+    CC="ccache clang" \
+    CLANG_TRIPLE="aarch64-linux-gnu-" \
+    CROSS_COMPILE="aarch64-linux-gnu-" \
+    CROSS_COMPILE_ARM32="arm-linux-gnueabi-" \
+    LLVM=1 \
+    LLVM_IAS=1
 }
 
 completion() {
