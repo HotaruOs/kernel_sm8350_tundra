@@ -2,7 +2,7 @@
 /*
  * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  *
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #ifndef _UAPI_MSM_IPA_H_
@@ -150,6 +150,10 @@
 #define IPA_IOCTL_DEL_MACSEC_MAPPING            93
 #define IPA_IOCTL_QUERY_CACHED_DRIVER_MSG       94
 #define IPA_IOCTL_SET_EXT_ROUTER_MODE           95
+#define IPA_IOCTL_ADD_DEL_DSCP_PCP_MAPPING      96
+#define IPA_IOCTL_SEND_VLAN_MUXID_MAPPING       97
+#define IPA_IOCTL_SEND_TUNNEL_TEMPLATE_INFO       98
+#define IPA_IOCTL_QUERY_TUNNEL_FEATURE       99
 /**
  * max size of the header to be inserted
  */
@@ -214,6 +218,11 @@
  */
 
 #define IPA_MAX_IPPT_NUM_PORT_FLT 5
+
+/**
+ * Max number of DSCP entries in uc
+ */
+#define IPA_UC_MAX_DSCP_VAL 64
 
 /**
  * New feature flag for CV2X config.
@@ -1522,6 +1531,9 @@ enum ipa_hdr_l2_type {
  * IPA_HDR_PROC_SET_DSCP:
  * IPA_HDR_PROC_EoGRE_HEADER_ADD:       Add IPV[46] and GRE header
  * IPA_HDR_PROC_EoGRE_HEADER_REMOVE:    Remove IPV[46] and GRE header
+ * IPA_HDR_PROC_WWAN_TO_ETHII_EX:		To update PCP value for E2E traffic.
+ * IPA_HDR_PROC_GRE_HEADER_ADD,         Add IPV[46] and IP-GRE header
+ * IPA_HDR_PROC_GRE_HEADER_REMOVE,      Remove IPV[46] and IP-GRE header
  */
 enum ipa_hdr_proc_type {
 	IPA_HDR_PROC_NONE,
@@ -1537,8 +1549,11 @@ enum ipa_hdr_proc_type {
 	IPA_HDR_PROC_SET_DSCP,
 	IPA_HDR_PROC_EoGRE_HEADER_ADD,
 	IPA_HDR_PROC_EoGRE_HEADER_REMOVE,
+	IPA_HDR_PROC_WWAN_TO_ETHII_EX,
+	IPA_HDR_PROC_GRE_HEADER_ADD,
+	IPA_HDR_PROC_GRE_HEADER_REMOVE
 };
-#define IPA_HDR_PROC_MAX (IPA_HDR_PROC_EoGRE_HEADER_REMOVE + 1)
+#define IPA_HDR_PROC_MAX (IPA_HDR_PROC_GRE_HEADER_REMOVE + 1)
 
 /**
  * struct ipa_rt_rule - attributes of a routing rule
@@ -1739,9 +1754,128 @@ struct IpaDscpVlanPcpMap_t {
 	uint8_t  pad3; /* for alignment */
 	uint8_t  num_mpls_val_sorted; /* num of elements in mpls_val_sorted */
 	uint32_t mpls_val_sorted[IPA_EoGRE_MAX_VLAN * IPA_GRE_MAX_S_VLAN];
-	uint8_t  vlan_c[IPA_EoGRE_MAX_VLAN * IPA_GRE_MAX_S_VLAN];
-	uint8_t  vlan_s[IPA_EoGRE_MAX_VLAN * IPA_GRE_MAX_S_VLAN];
+	uint16_t  vlan_c[IPA_EoGRE_MAX_VLAN * IPA_GRE_MAX_S_VLAN];
+	uint16_t  vlan_s[IPA_EoGRE_MAX_VLAN * IPA_GRE_MAX_S_VLAN];
 } __packed;
+
+
+#define MAX_VLAN_CONFIGURE 16
+enum pkt_path {
+	SW_PATH = 0,
+	HW_PATH_OUTSIDE_TUNNEL = 1,
+	HW_PATH_INSIDE_TUNNEL = 2
+};
+
+/* VLANID - Action - Tunnel_ID - MUX_ID */
+struct singletag_mux_map_entry {
+	uint16_t vlan_id;
+	uint8_t mux_id;
+	uint8_t pkt_path;
+	uint32_t tunnel_id;
+};
+
+struct ipa_ioc_mux_mapping_table {
+	struct singletag_mux_map_entry map_entries[MAX_VLAN_CONFIGURE];
+};
+
+/* Feature Type Supported Design*/
+/* Cache all Design Support with Regular HPS for both EoGRE and MPLSoGRE tunnel */
+#define DEFAULT_FEATURE 0x00
+/* EoGRE to support Single Tag packet with new HPS */
+#define SINGLE_TAG_FEATURE 0x01
+/* MPLSoGRE to support Double Tag packet with new HPS */
+#define DOUBLE_TAG_FEATURE 0x02
+/* EoGRE to support UnTag packet with new HPS */
+#define UNTAG_FEATURE 0x03
+
+/* l2 header is adjusted for every hwp_pkt_next_action */
+/* uc evaluate l2 header length and send packet to exception */
+#define SW_PATH_ADJ_L2_EXCEPTION 0x00
+/* uc evaluate l2 header length and send packet to 2nd pass */
+#define HW_PATH_ADJ_L2_RESUME_2ND_PASS 0x01
+/* uc evaluate l2 header length, update the metadata and send packet to 2nd pass */
+#define HW_PATH_ADJ_L2_METADATA_UPDATE_RESUME_2ND_PASS 0x02
+/* uc evaluate l2 header length, add outer header and send packet to 2nd pass */
+#define HW_PATH_ADJ_L2_ADD_TUNNEL_RESUME_2ND_PASS 0x03
+/* uc evaluate l2 header, update metadata, add outer header and send packet to 2nd pass */
+#define HW_PATH_ADJ_L2_ADD_TUNNEL_WITH_METADATA_UPDATE_RESUME_2ND_PASS 0x04
+
+/* untagged packet configuration */
+struct untag_pkt_config_t {
+	/* packet action that should follow untag packet */
+	uint32_t action_configured;
+	/* pdn from which untag packet should transfer */
+	uint8_t mux_id;
+	/* flag if 1=>pkt_with_option_hdr 0=>pkt_without_option_hdr */
+	uint8_t is_v6_options_hdr_present;
+	uint16_t pad0; /*for alignment*/
+	/* lower 32 bit of tunnel header address */
+	uint32_t *tunnel_template_addr;
+	uint32_t pad1; /*for alignment*/
+} __packed;
+
+
+/* vlanid - action - tunnel_id - mux_id */
+struct singletag_mux_mapping_table_t {
+	/* multi tunnel purpose */
+	uint16_t vlan_id_start;
+	uint16_t vlan_id_end;
+	uint32_t action_configured;
+	/* pdn from which untag packet should transfer */
+	uint8_t mux_id;
+	/* flag if 1=>pkt_with_option_hdr 0=>pkt_without_option_hdr */
+	uint8_t is_v6_options_hdr_present;
+	uint16_t pad0; /*for alignment*/
+	uint32_t *tunnel_template_addr;
+} __packed;
+
+struct doubletag_mux_mapping_table_t {
+	/* multi tunnel purpose */
+	uint16_t stag_id_start;
+	uint16_t stag_id_end;
+	uint16_t ctag_id_start;
+	uint16_t ctag_id_end;
+	uint32_t action_configured;
+	/* pdn from which untag packet should transfer */
+	uint8_t mux_id;
+	/* flag if 1=>pkt_with_option_hdr 0=>pkt_without_option_hdr */
+	uint8_t is_v6_options_hdr_present;
+	uint16_t pad0; /*for alignment*/
+	uint32_t *tunnel_template_addr;
+	uint32_t pad1; /*for alignment*/
+} __packed;
+
+/* max template side pass to uc */
+#define MAX_TEMPLATE_SIZE 64
+/* max number of tunnel to support ie: per PDN two tunnel (2*8)*/
+#define MAX_TUNNEL_SUPPORT 16
+
+/* configuration table */
+struct tunnel_protocols_config_table_t {
+	struct untag_pkt_config_t untagged_mapping_table;
+	uint8_t num_of_single_tag_configs;
+	uint8_t pad0; /*for alignment*/
+	uint16_t pad1; /*for alignment*/
+	uint32_t pad2; /*for alignment*/
+	/* table for single tag pkt */
+	struct singletag_mux_mapping_table_t singletag_mux_mapping_table[MAX_TUNNEL_SUPPORT];
+	uint8_t num_of_double_tag_configs;
+	uint8_t pad3; /*for alignment*/
+	uint16_t pad4; /*for alignment*/
+	uint32_t pad5; /*for alignment*/
+	/* table for double tag pkt */
+	struct doubletag_mux_mapping_table_t doubletag_mux_mapping_table[MAX_TUNNEL_SUPPORT];
+};
+
+/* ioctl tunnel configuration table */
+
+struct ipa_ioc_tunnel_template_info {
+	uint8_t template_header[MAX_TEMPLATE_SIZE];
+	uint32_t template_len;
+	uint32_t template_type;
+	/*tunnel configuration table*/
+	struct tunnel_protocols_config_table_t tunnel_config;
+};
 
 /**
  * struct ipa_exception
@@ -1796,7 +1930,10 @@ struct ipa_ipgre_info {
 	 * GRE header value.
 	 */
 	uint16_t gre_protocol;
-	uint8_t unused; /* for alignment */
+	/* If v6 tunnel: option header enabled then set "true"
+	 * If v4 tunnel: option header enabled then set "false"
+	 */
+	uint8_t ipv6_option_hdr_enabled;
 	/*
 	 * The number of valid elements in, and the accompanying
 	 * exception_list, below
@@ -1857,18 +1994,86 @@ struct ipa_eogre_hdr_proc_ctx_params {
 	struct ipa_eogre_header_remove_procparams hdr_remove_param;
 };
 
+
+/**
+ * struct ipa_gre_header_add_procparams -
+ * @eth_hdr_retained:  Specifies if Ethernet header is retained or not
+ * @input_ip_version:  Specifies if Input header is IPV4(0) or IPV6(1)
+ * @output_ip_version: Specifies if template header's outer IP is IPV4(0) or IPV6(1)
+ * @second_pass:       Specifies if the data should be processed again.
+ * @is_mpls:           Specifies if ucp cmd is for legacy EoGRE(0) or MPLSoGRE(1)
+ * @tag_remove_len:    Specifies amount to be removed for the tags
+ */
+struct ipa_gre_header_add_procparams {
+	uint32_t eth_hdr_retained :1;
+	uint32_t input_ip_version :1;
+	uint32_t output_ip_version :1;
+	uint32_t second_pass :1;
+	uint32_t is_mpls :1;
+	uint32_t tag_remove_len :4;
+	uint32_t reserved :23;
+};
+
+/**
+ * struct ipa_gre_header_remove_procparams -
+ * @hdr_len_remove:    Specifies how much (in bytes) of the header needs
+ *                     to be removed
+ * @outer_ip_version:  Specifies if template header's outer IP is IPV4(0) or IPV6(1)
+ * @is_mpls:           Specifies if ucp cmd is for legacy EoGRE(0) or MPLSoGRE(1)
+ * @tag_add_len:       Specifies amount to be added for the tags
+ */
+struct ipa_gre_header_remove_procparams {
+	uint32_t hdr_len_remove :8; /* 44 bytes for IPV6, 24 for IPV4 */
+	uint32_t outer_ip_version :1;
+	uint32_t is_mpls :1;
+	uint32_t tag_add_len :4;
+	uint32_t reserved :18;
+};
+
+/**
+ * struct ipa_gre_hdr_proc_ctx_params -
+ * @hdr_add_param: parameters for header add
+ * @hdr_remove_param: parameters for header remove
+ */
+struct ipa_gre_hdr_proc_ctx_params {
+	struct ipa_gre_header_add_procparams hdr_add_param;
+	struct ipa_gre_header_remove_procparams hdr_remove_param;
+};
+
 /**
  * struct ipa_eth_II_to_eth_II_ex_procparams -
  * @input_ethhdr_negative_offset: Specifies where the ethernet hdr offset is
  *	(in bytes) from the start of the input IP hdr
  * @output_ethhdr_negative_offset: Specifies where the ethernet hdr offset is
  *	(in bytes) from the end of the template hdr
+ * @output_dscp_pcp_update: Specifies if VLAN PCP needs to be updated based on
+ *                         DSCP<->PCP mapping table.
  * @reserved: for future use
  */
 struct ipa_eth_II_to_eth_II_ex_procparams {
 	uint32_t input_ethhdr_negative_offset : 8;
 	uint32_t output_ethhdr_negative_offset : 8;
-	uint32_t reserved : 16;
+	uint32_t output_dscp_pcp_update : 1;
+	uint32_t reserved : 15;
+};
+
+/**
+ * struct ipa_wwan_to_eth_II_ex_procparams -
+ * @input_ethhdr_negative_offset: Specifies where the ethernet hdr offset is
+ *	(in bytes) from the start of the input IP hdr
+ * @output_ethhdr_negative_offset: Specifies where the ethernet hdr offset is
+ *	(in bytes) from the end of the template hdr
+ * @output_dscp_pcp_update: Specifies if VLAN PCP needs to be updated based on
+ *                         DSCP<->PCP mapping table.
+ * @input_ethhdr_valid: Specifies whether input ethernet header is valid or not.
+ * @reserved: for future use
+ */
+struct ipa_wwan_to_eth_II_ex_procparams {
+	uint32_t input_ethhdr_negative_offset : 8;
+	uint32_t output_ethhdr_negative_offset : 8;
+	uint32_t output_dscp_pcp_update : 1;
+	uint32_t input_ethhdr_valid : 1;
+	uint32_t reserved : 14;
 };
 
 #define L2TP_USER_SPACE_SPECIFY_DST_PIPE
@@ -1881,6 +2086,7 @@ struct ipa_eth_II_to_eth_II_ex_procparams {
  * @l2tp_params: l2tp parameters
  * @eogre_params: eogre parameters
  * @generic_params: generic proc_ctx params
+ * @generic_params_v2: generic proc_ctx params for bridging
  * @proc_ctx_hdl: out parameter, handle to proc_ctx, valid when status is 0
  * @status:	out parameter, status of header add operation,
  *		0 for success,
@@ -1894,6 +2100,8 @@ struct ipa_hdr_proc_ctx_add {
 	struct ipa_l2tp_hdr_proc_ctx_params l2tp_params;
 	struct ipa_eogre_hdr_proc_ctx_params eogre_params;
 	struct ipa_eth_II_to_eth_II_ex_procparams generic_params;
+	struct ipa_wwan_to_eth_II_ex_procparams generic_params_v2;
+	struct ipa_gre_hdr_proc_ctx_params gre_params;
 };
 
 #define IPA_L2TP_HDR_PROC_SUPPORT
@@ -3655,6 +3863,18 @@ struct ipa_ioc_ext_router_info {
 };
 
 /**
+ * struct ipa_ioc_dscp_pcp_map_info - provide dscp pcp mapping info to add/delete
+ * @add: Boolean to indicate add or delete the mapping
+ * @dscp_pcp_map: DSCP <6 bits> and PCP <3 bits>.
+ *                Only 3 bits are valid(0-7) for PCP.
+ *                DSCP is used as index (0-63).
+ */
+struct ipa_ioc_dscp_pcp_map_info {
+	uint32_t add;
+	uint8_t dscp_pcp_map[IPA_UC_MAX_DSCP_VAL];
+};
+
+/**
  *   actual IOCTLs supported by IPA driver
  */
 #define IPA_IOC_ADD_HDR _IOWR(IPA_IOC_MAGIC, \
@@ -3975,6 +4195,22 @@ struct ipa_ioc_ext_router_info {
 				IPA_IOCTL_SET_EXT_ROUTER_MODE, \
 				struct ipa_ioc_ext_router_info)
 
+#define IPA_IOC_ADD_DEL_DSCP_PCP_MAPPING _IOWR(IPA_IOC_MAGIC, \
+				IPA_IOCTL_ADD_DEL_DSCP_PCP_MAPPING, \
+				struct ipa_ioc_dscp_pcp_map_info)
+
+#define IPA_IOC_SEND_VLAN_MUXID_MAPPING _IOWR(IPA_IOC_MAGIC, \
+				IPA_IOCTL_SEND_VLAN_MUXID_MAPPING, \
+				struct ipa_ioc_mux_mapping_table)
+
+#define IPA_IOC_SEND_TUNNEL_TEMPLATE_INFO _IOW(IPA_IOC_MAGIC, \
+				IPA_IOCTL_SEND_TUNNEL_TEMPLATE_INFO, \
+				struct ipa_ioc_tunnel_template_info)
+
+
+#define IPA_IOC_QUERY_TUNNEL_FEATURE _IOW(IPA_IOC_MAGIC, \
+				IPA_IOCTL_QUERY_TUNNEL_FEATURE, \
+				uint8_t)
 
 /*
  * unique magic number of the Tethering bridge ioctls

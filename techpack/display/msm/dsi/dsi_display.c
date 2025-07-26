@@ -3151,7 +3151,7 @@ error:
 	return rc;
 }
 
-#ifdef CONFIG_DEEPSLEEP
+#if defined(CONFIG_DEEPSLEEP) || defined(CONFIG_HIBERNATION)
 int dsi_display_unset_clk_src(struct dsi_display *display)
 {
 	int rc = 0;
@@ -3996,6 +3996,12 @@ static int dsi_display_clocks_init(struct dsi_display *display)
 		dsi_clock_name = "qcom,dsi-select-sec-clocks";
 
 	num_clk = dsi_display_get_clocks_count(display, dsi_clock_name);
+
+	if (num_clk <= 0) {
+		rc = num_clk;
+		DSI_WARN("failed to read %s, rc = %d\n", dsi_clock_name, num_clk);
+		goto error;
+	}
 
 	DSI_DEBUG("clk count=%d\n", num_clk);
 

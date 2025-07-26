@@ -169,6 +169,7 @@ config QCOM_RIMPS
 config QCOM_LLCC
 	tristate "Qualcomm Technologies, Inc. LLCC driver"
 	depends on ARCH_QCOM || COMPILE_TEST
+	select REGMAP_MMIO
 	help
 	  Qualcomm Technologies, Inc. platform specific
 	  Last Level Cache Controller(LLCC) driver. This provides interfaces
@@ -651,6 +652,16 @@ config MINIDUMP_MAX_ENTRIES
 	help
 	  This defines maximum number of entries to be allocated for application
 	  subsytem in Minidump table.
+
+config QCOM_MINIDUMP_ENCRYPT
+	bool "QCOM Minidump Encryption Required"
+	depends on QCOM_MINIDUMP
+	default y
+	help
+	  This adds a support to decide whether the regions in minidump
+	  table should be encrypted or not. By default, encryption is done
+	  by the boot firmware and the decision for encryption is taken by
+	  the subsystems.
 
 config QCOM_MICRODUMP
 	tristate "Qualcomm Technologies, Inc. Microdump Support"
