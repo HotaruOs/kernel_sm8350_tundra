@@ -3909,3 +3909,5 @@ OBJS_DIRS += $(dir $(OBJS)) \
 CLEAN_DIRS := $(addsuffix *.o,$(sort $(OBJS_DIRS))) \
 	      $(addsuffix .*.o.cmd,$(sort $(OBJS_DIRS)))
 clean-files := $(CLEAN_DIRS)
+
+ccflags-y += -Wno-frame-larger-than=
