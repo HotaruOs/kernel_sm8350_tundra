@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/clk-provider.h>
@@ -840,7 +839,7 @@ static int a6xx_rgmu_boot(struct adreno_device *adreno_dev)
 
 	device->gmu_fault = false;
 
-	kgsl_pwrctrl_set_state(device, KGSL_STATE_AWARE);
+	trace_kgsl_pwr_set_state(device, KGSL_STATE_AWARE);
 
 	return 0;
 
@@ -864,18 +863,6 @@ static void rgmu_idle_check(struct work_struct *work)
 		goto done;
 
 	if (!atomic_read(&device->active_cnt)) {
-		spin_lock(&device->submit_lock);
-
-		if (device->submit_now) {
-			spin_unlock(&device->submit_lock);
-			kgsl_pwrscale_update(device);
-			kgsl_start_idle_timer(device);
-			goto done;
-		}
-
-		device->slumber = true;
-		spin_unlock(&device->submit_lock);
-
 		a6xx_power_off(adreno_dev);
 	} else {
 		kgsl_pwrscale_update(device);
@@ -920,8 +907,9 @@ static int a6xx_boot(struct adreno_device *adreno_dev)
 	set_bit(RGMU_PRIV_GPU_STARTED, &rgmu->flags);
 
 	device->pwrctrl.last_stat_updated = ktime_get();
+	device->state = KGSL_STATE_ACTIVE;
 
-	kgsl_pwrctrl_set_state(device, KGSL_STATE_ACTIVE);
+	trace_kgsl_pwr_set_state(device, KGSL_STATE_ACTIVE);
 
 	return 0;
 }
@@ -958,8 +946,9 @@ static void a6xx_rgmu_touch_wakeup(struct adreno_device *adreno_dev)
 	set_bit(RGMU_PRIV_GPU_STARTED, &rgmu->flags);
 
 	device->pwrctrl.last_stat_updated = ktime_get();
+	device->state = KGSL_STATE_ACTIVE;
 
-	kgsl_pwrctrl_set_state(device, KGSL_STATE_ACTIVE);
+	trace_kgsl_pwr_set_state(device, KGSL_STATE_ACTIVE);
 
 done:
 	/*
@@ -1026,8 +1015,9 @@ static int a6xx_first_boot(struct adreno_device *adreno_dev)
 	set_bit(RGMU_PRIV_GPU_STARTED, &rgmu->flags);
 
 	device->pwrctrl.last_stat_updated = ktime_get();
+	device->state = KGSL_STATE_ACTIVE;
 
-	kgsl_pwrctrl_set_state(device, KGSL_STATE_ACTIVE);
+	trace_kgsl_pwr_set_state(device, KGSL_STATE_ACTIVE);
 
 	return 0;
 }
@@ -1119,7 +1109,7 @@ no_gx_power:
 
 	kgsl_pwrscale_sleep(device);
 
-	kgsl_pwrctrl_set_state(device, KGSL_STATE_SLUMBER);
+	trace_kgsl_pwr_set_state(device, KGSL_STATE_SLUMBER);
 
 	return ret;
 }
@@ -1196,7 +1186,7 @@ static int a6xx_rgmu_pm_suspend(struct adreno_device *adreno_dev)
 
 	adreno_dispatcher_halt(device);
 
-	kgsl_pwrctrl_set_state(device, KGSL_STATE_SUSPEND);
+	trace_kgsl_pwr_set_state(device, KGSL_STATE_SUSPEND);
 
 	return 0;
 err:
