@@ -2375,10 +2375,6 @@ proc_map_files_readdir(struct file *file, struct dir_context *ctx)
 			mmput(mm);
 			goto out_put_task;
 		}
-
-		p->start = vma->vm_start;
-		p->end = VMA_PAD_START(vma);
-		p->mode = vma->vm_file->f_mode;
 	}
 	up_read(&mm->mmap_sem);
 	mmput(mm);
